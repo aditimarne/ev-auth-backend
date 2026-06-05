@@ -1,6 +1,6 @@
 
 
-python-3.10.13
+python-3.10.14
 uvicorn
 
 numpy==1.23.5
