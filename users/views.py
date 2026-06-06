@@ -222,35 +222,36 @@ class ServeAvatarView(APIView):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def send_otp(request):
-    email = request.data.get('email')
+    try:
+        email = request.data.get('email')
+        print(f"Received email: {email}")  # ← debug
 
-    if not User.objects(email=email).first():
-        return Response({'error': 'No account found with this email.'}, status=404)
+        user = User.objects(email=email).first()
+        print(f"User found: {user}")  # ← debug
 
-    # Invalidate old OTPs
-    PasswordResetOTP.objects(email=email, is_used=False).update(set__is_used=True)
+        if not user:
+            return Response({'error': 'No account found with this email.'}, status=404)
 
-    # Generate new OTP
-    otp = str(random.randint(100000, 999999))
-    PasswordResetOTP(email=email, otp=otp).save()
+        PasswordResetOTP.objects(email=email, is_used=False).update(set__is_used=True)
 
-    send_mail(
-        subject='🔋 Battery Health App — Password Reset OTP',
-        message=f'''Hi,
+        otp = str(random.randint(100000, 999999))
+        PasswordResetOTP(email=email, otp=otp).save()
+        print(f"OTP generated: {otp}")  # ← debug
 
-Your OTP for password reset is: {otp}
+        send_mail(
+            subject='🔋 Battery Health App — Password Reset OTP',
+            message=f'Your OTP is: {otp}\n\nValid for 10 minutes.',
+            from_email=f'Battery Health App <{os.getenv("EMAIL_HOST_USER")}>',
+            recipient_list=[email],
+        )
+        print("Email sent successfully")  # ← debug
 
-This OTP is valid for 10 minutes.
-If you did not request this, please ignore this email.
+        return Response({'message': 'OTP sent to your email.'})
 
-— Battery Health App Team''',
-        from_email='Battery Health App <batteryhealth.project@gmail.com>',
-        recipient_list=[email],
-    )
-
-    return Response({'message': 'OTP sent to your email.'})
-
-
+    except Exception as e:
+        print(f"send_otp error: {str(e)}")  # ← this will show in Render logs
+        return Response({'error': str(e)}, status=500)
+    
 # ---------- Forgot Password - Verify OTP ----------
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
