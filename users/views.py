@@ -264,6 +264,27 @@ If you did not request this, ignore this email.
     return Response({'message': 'OTP sent to your email.'})
 
 # ---------- Forgot Password - Reset Password ----------
+# ---------- Forgot Password - Verify OTP ----------
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def verify_otp(request):
+    email = request.data.get('email')
+    otp = request.data.get('otp')
+
+    record = PasswordResetOTP.objects(
+        email=email, otp=otp, is_used=False
+    ).order_by('-created_at').first()
+
+    if not record:
+        return Response({'error': 'Invalid OTP.'}, status=400)
+
+    if not record.is_valid():
+        return Response({'error': 'OTP has expired.'}, status=400)
+
+    return Response({'message': 'OTP verified.'})
+
+
+# ---------- Forgot Password - Reset Password ----------
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def reset_password(request):
