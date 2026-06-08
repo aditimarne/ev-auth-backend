@@ -21,7 +21,7 @@ from users.models import User
 from django.core.mail import send_mail
 from .models import User, PasswordResetOTP
 import random
-
+import resend
 
 from .serializers import (ChangePasswordSerializer, LoginSerializer,
                           ProfileSerializer, RegisterSerializer)
@@ -222,35 +222,38 @@ class ServeAvatarView(APIView):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def send_otp(request):
+    email = request.data.get('email')
+
+    if not User.objects(email=email).first():
+        return Response({'error': 'No account found with this email.'}, status=404)
+
+    PasswordResetOTP.objects(email=email, is_used=False).update(set__is_used=True)
+
+    otp = str(random.randint(100000, 999999))
+    PasswordResetOTP(email=email, otp=otp).save()
+
     try:
-        email = request.data.get('email')
-        print(f"Received email: {email}")  # ← debug
+        resend.api_key = os.getenv("RESEND_API_KEY")
 
-        user = User.objects(email=email).first()
-        print(f"User found: {user}")  # ← debug
+        resend.Emails.send({
+            "from": "Battery Health App <onboarding@resend.dev>",
+            "to": email,
+            "subject": "🔋 Battery Health App — Password Reset OTP",
+            "text": f"""Hi,
 
-        if not user:
-            return Response({'error': 'No account found with this email.'}, status=404)
+Your OTP for password reset is: {otp}
 
-        PasswordResetOTP.objects(email=email, is_used=False).update(set__is_used=True)
+This OTP is valid for 10 minutes.
+If you did not request this, please ignore this email.
 
-        otp = str(random.randint(100000, 999999))
-        PasswordResetOTP(email=email, otp=otp).save()
-        print(f"OTP generated: {otp}")  # ← debug
-
-        send_mail(
-            subject='🔋 Battery Health App — Password Reset OTP',
-            message=f'Your OTP is: {otp}\n\nValid for 10 minutes.',
-            from_email=f'Battery Health App <{os.getenv("EMAIL_HOST_USER")}>',
-            recipient_list=[email],
-        )
-        print("Email sent successfully")  # ← debug
-
-        return Response({'message': 'OTP sent to your email.'})
+— Battery Health App Team"""
+        })
 
     except Exception as e:
-        print(f"send_otp error: {str(e)}")  # ← this will show in Render logs
-        return Response({'error': str(e)}, status=500)
+        print("send_otp error:", str(e))
+        return Response({'error': 'Failed to send OTP.'}, status=500)
+
+    return Response({'message': 'OTP sent to your email.'})
     
 # ---------- Forgot Password - Verify OTP ----------
 @api_view(['POST'])
