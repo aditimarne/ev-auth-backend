@@ -237,7 +237,7 @@ def send_otp(request):
 
         resend.Emails.send({
             "from": "Battery Health App <onboarding@resend.dev>",
-            "to": [email],
+            "to":  ["marneaditi22@gmail.com"],
             "subject": "🔋 Battery Health App — Password Reset OTP",
             "text": f"""Hi,
 
