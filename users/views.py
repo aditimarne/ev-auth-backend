@@ -21,7 +21,8 @@ from users.models import User
 from django.core.mail import send_mail
 from .models import User, PasswordResetOTP
 import random
-import resend
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
 
 from .serializers import (ChangePasswordSerializer, LoginSerializer,
                           ProfileSerializer, RegisterSerializer)
@@ -233,49 +234,34 @@ def send_otp(request):
     PasswordResetOTP(email=email, otp=otp).save()
 
     try:
-        resend.api_key = os.getenv("RESEND_API_KEY")
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = os.getenv('BREVO_API_KEY')
 
-        resend.Emails.send({
-            "from": "Battery Health App <onboarding@resend.dev>",
-            "to":  ["marneaditi22@gmail.com"],
-            "subject": "🔋 Battery Health App — Password Reset OTP",
-            "text": f"""Hi,
+        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
+            sib_api_v3_sdk.ApiClient(configuration)
+        )
+
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            to=[{"email": email}],
+            sender={"email": "aditimarne22@gmail.com", "name": "Battery Health App"},
+            subject="Battery Health App — Password Reset OTP",
+            text_content=f"""Hi,
 
 Your OTP for password reset is: {otp}
 
-This OTP is valid for 10 minutes.
-If you did not request this, please ignore this email.
+Valid for 10 minutes.
+If you did not request this, ignore this email.
 
 — Battery Health App Team"""
-        })
+        )
 
-    except Exception as e:
-        print("send_otp error FULL:", str(e))
-        import traceback
-        traceback.print_exc()
-        return Response({'error':  str(e)}, status=500)
+        api_instance.send_transac_email(send_smtp_email)
+
+    except ApiException as e:
+        print("Brevo error:", str(e))
+        return Response({'error': 'Failed to send OTP.'}, status=500)
 
     return Response({'message': 'OTP sent to your email.'})
-    
-# ---------- Forgot Password - Verify OTP ----------
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])
-def verify_otp(request):
-    email = request.data.get('email')
-    otp = request.data.get('otp')
-
-    record = PasswordResetOTP.objects(
-        email=email, otp=otp, is_used=False
-    ).order_by('-created_at').first()
-
-    if not record:
-        return Response({'error': 'Invalid OTP.'}, status=400)
-
-    if not record.is_valid():
-        return Response({'error': 'OTP has expired.'}, status=400)
-
-    return Response({'message': 'OTP verified.'})
-
 
 # ---------- Forgot Password - Reset Password ----------
 @api_view(['POST'])
