@@ -237,7 +237,7 @@ def send_otp(request):
 
         resend.Emails.send({
             "from": "Battery Health App <onboarding@resend.dev>",
-            "to": email,
+            "to": [email],
             "subject": "🔋 Battery Health App — Password Reset OTP",
             "text": f"""Hi,
 
@@ -250,8 +250,10 @@ If you did not request this, please ignore this email.
         })
 
     except Exception as e:
-        print("send_otp error:", str(e))
-        return Response({'error': 'Failed to send OTP.'}, status=500)
+        print("send_otp error FULL:", str(e))
+        import traceback
+        traceback.print_exc()
+        return Response({'error':  str(e)}, status=500)
 
     return Response({'message': 'OTP sent to your email.'})
     
