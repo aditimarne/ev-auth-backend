@@ -85,7 +85,7 @@ MIDDLEWARE = [
 ]
 
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://ev-frontend-omega.vercel.app")
 
 CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
