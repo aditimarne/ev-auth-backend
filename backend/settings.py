@@ -1,10 +1,12 @@
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+
 import certifi
+from dotenv import load_dotenv
 from mongoengine import connect
 from pymongo import MongoClient
+
 # from gridfs import GridFS
 
 
@@ -85,7 +87,7 @@ MIDDLEWARE = [
 ]
 
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://ev-frontend-omega.vercel.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://evbatteryhealth.vercel.app/")
 
 CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
